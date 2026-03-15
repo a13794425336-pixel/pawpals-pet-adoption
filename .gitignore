@@ -1,0 +1,11 @@
+.env
+.npm-cache
+.DS_Store
+.server.log
+.server.pid
+dist
+node_modules
+server/dist
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
