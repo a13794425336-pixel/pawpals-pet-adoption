@@ -1,4 +1,14 @@
 import type { IncomingMessage } from "node:http";
+import {
+  getBrowseScreenData,
+  getHealthData,
+  getHomeScreenData,
+  getPetDetailData,
+  getProfileScreenData,
+  normalizeBrowseFilter,
+  submitApplicationForPet,
+  toggleFavoriteForPet,
+} from "../server/src/petAdoptService";
 
 type VercelRequest = IncomingMessage & {
   method?: string;
@@ -11,10 +21,6 @@ type VercelResponse = {
   json: (payload: unknown) => void;
   setHeader: (name: string, value: string) => void;
 };
-
-async function loadPetAdoptService() {
-  return import("../server/src/petAdoptService");
-}
 
 async function parseRequestBody(req: VercelRequest) {
   if (req.body && typeof req.body === "object") {
@@ -72,33 +78,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const method = req.method ?? "GET";
     const route = getRouteSegments(req);
-    const service = await loadPetAdoptService();
 
     if (method === "GET" && route.length === 1 && route[0] === "health") {
-      res.status(200).json(service.getHealthData());
+      res.status(200).json(getHealthData());
       return;
     }
 
     if (method === "GET" && route.length === 1 && route[0] === "home") {
-      res.status(200).json(await service.getHomeScreenData());
+      res.status(200).json(await getHomeScreenData());
       return;
     }
 
     if (method === "GET" && route.length === 1 && route[0] === "browse") {
       const search = getQueryValue(req.query?.search) ?? "";
-      const filter = service.normalizeBrowseFilter(getQueryValue(req.query?.filter));
+      const filter = normalizeBrowseFilter(getQueryValue(req.query?.filter));
 
-      res.status(200).json(await service.getBrowseScreenData(search, filter));
+      res.status(200).json(await getBrowseScreenData(search, filter));
       return;
     }
 
     if (method === "GET" && route.length === 1 && route[0] === "profile") {
-      res.status(200).json(await service.getProfileScreenData());
+      res.status(200).json(await getProfileScreenData());
       return;
     }
 
     if (method === "GET" && route.length === 2 && route[0] === "pets") {
-      res.status(200).json(await service.getPetDetailData(route[1]));
+      res.status(200).json(await getPetDetailData(route[1]));
       return;
     }
 
@@ -106,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = await parseRequestBody(req);
       const profileId = typeof body.profileId === "string" ? body.profileId : undefined;
 
-      res.status(200).json(await service.toggleFavoriteForPet(route[1], profileId));
+      res.status(200).json(await toggleFavoriteForPet(route[1], profileId));
       return;
     }
 
@@ -120,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      res.status(201).json(await service.submitApplicationForPet(petSlug, profileId));
+      res.status(201).json(await submitApplicationForPet(petSlug, profileId));
       return;
     }
 
