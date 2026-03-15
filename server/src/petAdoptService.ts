@@ -1,5 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 loadEnv();
 
@@ -114,16 +115,24 @@ function requireEnv(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY") {
   return value;
 }
 
-const supabase = createClient(
-  requireEnv("SUPABASE_URL"),
-  requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  },
-);
+let supabaseClient: SupabaseClient | null = null;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      requireEnv("SUPABASE_URL"),
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      },
+    );
+  }
+
+  return supabaseClient;
+}
 
 function sanitizeSearchTerm(value: string) {
   return value.trim().replace(/[,%_]/g, " ").replace(/\s+/g, " ").slice(0, 80);
@@ -138,7 +147,7 @@ export function normalizeBrowseFilter(value: string | undefined): BrowseFilterKe
 }
 
 async function loadSettings() {
-  const { data, error } = await supabase.from("app_settings").select("*").limit(1).maybeSingle();
+  const { data, error } = await getSupabase().from("app_settings").select("*").limit(1).maybeSingle();
 
   if (error) {
     throw new Error(`读取应用配置失败：${error.message}`);
@@ -152,10 +161,10 @@ async function loadSettings() {
 }
 
 async function loadProfile(profileId?: string) {
-  let query = supabase.from("profiles").select("*").order("created_at", { ascending: true }).limit(1);
+  let query = getSupabase().from("profiles").select("*").order("created_at", { ascending: true }).limit(1);
 
   if (profileId) {
-    query = supabase.from("profiles").select("*").eq("id", profileId).limit(1);
+    query = getSupabase().from("profiles").select("*").eq("id", profileId).limit(1);
   }
 
   const { data, error } = await query.maybeSingle();
@@ -172,7 +181,7 @@ async function loadProfile(profileId?: string) {
 }
 
 async function loadProfileServices(profileId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("profile_services")
     .select("label, sort_order")
     .eq("profile_id", profileId)
@@ -186,7 +195,7 @@ async function loadProfileServices(profileId: string) {
 }
 
 async function loadFavoritePetIds(profileId: string) {
-  const { data, error } = await supabase.from("favorites").select("pet_id").eq("profile_id", profileId);
+  const { data, error } = await getSupabase().from("favorites").select("pet_id").eq("profile_id", profileId);
 
   if (error) {
     throw new Error(`读取收藏状态失败：${error.message}`);
@@ -196,7 +205,7 @@ async function loadFavoritePetIds(profileId: string) {
 }
 
 async function loadApplicationPetIds(profileId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("adoption_applications")
     .select("pet_id, status")
     .eq("profile_id", profileId);
@@ -209,7 +218,7 @@ async function loadApplicationPetIds(profileId: string) {
 }
 
 async function loadFilters(screen: "home" | "browse") {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("screen_filters")
     .select("screen, key, label, sort_order, is_default")
     .eq("screen", screen)
@@ -223,7 +232,7 @@ async function loadFilters(screen: "home" | "browse") {
 }
 
 async function loadHomePicks() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("pets")
     .select("*")
     .eq("is_home_pick", true)
@@ -237,7 +246,7 @@ async function loadHomePicks() {
 }
 
 async function loadBrowseFeaturedPet() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("pets")
     .select("*")
     .eq("is_editorial_pick", true)
@@ -257,7 +266,7 @@ async function loadBrowseFeaturedPet() {
 }
 
 async function loadBrowseResults(search: string, filter: BrowseFilterKey) {
-  let query = supabase
+  let query = getSupabase()
     .from("pets")
     .select("*")
     .eq("is_browse_result", true)
@@ -296,7 +305,7 @@ async function loadBrowseResults(search: string, filter: BrowseFilterKey) {
 }
 
 async function loadPetBySlug(slug: string) {
-  const { data, error } = await supabase.from("pets").select("*").eq("slug", slug).limit(1).maybeSingle();
+  const { data, error } = await getSupabase().from("pets").select("*").eq("slug", slug).limit(1).maybeSingle();
 
   if (error) {
     throw new Error(`读取宠物详情失败：${error.message}`);
@@ -466,7 +475,7 @@ export async function getProfileScreenData() {
 export async function toggleFavoriteForPet(petSlug: string, profileId?: string) {
   const [pet, profile] = await Promise.all([loadPetBySlug(petSlug), loadProfile(profileId)]);
 
-  const { data: existingFavorite, error: favoriteLookupError } = await supabase
+  const { data: existingFavorite, error: favoriteLookupError } = await getSupabase()
     .from("favorites")
     .select("pet_id")
     .eq("profile_id", profile.id)
@@ -484,7 +493,7 @@ export async function toggleFavoriteForPet(petSlug: string, profileId?: string) 
     : Math.max(profile.favorites_count - 1, 0);
 
   if (existingFavorite) {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from("favorites")
       .delete()
       .eq("profile_id", profile.id)
@@ -494,7 +503,7 @@ export async function toggleFavoriteForPet(petSlug: string, profileId?: string) 
       throw new Error(`取消收藏失败：${error.message}`);
     }
   } else {
-    const { error } = await supabase.from("favorites").insert({
+    const { error } = await getSupabase().from("favorites").insert({
       profile_id: profile.id,
       pet_id: pet.id,
     });
@@ -504,7 +513,7 @@ export async function toggleFavoriteForPet(petSlug: string, profileId?: string) 
     }
   }
 
-  const { error: profileUpdateError } = await supabase
+  const { error: profileUpdateError } = await getSupabase()
     .from("profiles")
     .update({
       favorites_count: nextFavoritesCount,
@@ -526,7 +535,7 @@ export async function toggleFavoriteForPet(petSlug: string, profileId?: string) 
 export async function submitApplicationForPet(petSlug: string, profileId?: string) {
   const [pet, profile] = await Promise.all([loadPetBySlug(petSlug), loadProfile(profileId)]);
 
-  const { data: existingApplication, error: applicationLookupError } = await supabase
+  const { data: existingApplication, error: applicationLookupError } = await getSupabase()
     .from("adoption_applications")
     .select("pet_id")
     .eq("profile_id", profile.id)
@@ -547,7 +556,7 @@ export async function submitApplicationForPet(petSlug: string, profileId?: strin
     };
   }
 
-  const { error: insertError } = await supabase.from("adoption_applications").insert({
+  const { error: insertError } = await getSupabase().from("adoption_applications").insert({
     profile_id: profile.id,
     pet_id: pet.id,
     status: "reviewing",
@@ -560,7 +569,7 @@ export async function submitApplicationForPet(petSlug: string, profileId?: strin
   const nextApplicationsCount = profile.active_applications_count + 1;
   const nextRecentStatusBody = `「${pet.display_name}」审核中 · 预计今天 18:00 前收到初审结果`;
 
-  const { error: updateProfileError } = await supabase
+  const { error: updateProfileError } = await getSupabase()
     .from("profiles")
     .update({
       active_applications_count: nextApplicationsCount,
