@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --page-cream: #fff9f4;
+  --page-white: #ffffff;
+  --ink-brown: #2f241f;
+  --ink-neutral: #18181b;
+  --muted-brown: #8c7468;
+  --muted-neutral: #8e7768;
+  --muted-neutral-deep: #6e5749;
+  --soft-brown: #6e5950;
+  --accent: #d97a5c;
+  --accent-strong: #e17a47;
+  --accent-badge: #e38a68;
+  --accent-orange: #f97316;
+  --accent-gold: #e4a15b;
+  --accent-gold-deep: #b8895a;
+  --accent-soft: rgba(225, 122, 71, 0.12);
+  --accent-soft-2: rgba(217, 122, 92, 0.12);
+  --accent-gold-soft: rgba(228, 161, 91, 0.12);
+  --card-cream: #f6e9df;
+  --card-cream-2: #faf1e8;
+  --card-cream-3: #fdf1e3;
+  --card-cream-4: #f7ebdd;
+  --line-warm: #e4d2c6;
+  --line-neutral: #e5d2c2;
+  --tab-muted-warm: #b39b8e;
+  --tab-muted-neutral: #b29b8a;
+  --signal-warm: #8a4b2d;
+  --glass-tag: rgba(255, 255, 255, 0.14);
+  --glass-surface: rgba(255, 255, 255, 0.8);
+  --glass-surface-strong: rgba(255, 255, 255, 0.9);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    min-width: 320px;
+    background:
+      radial-gradient(circle at top, rgba(255, 255, 255, 0.92), rgba(244, 237, 229, 0.42) 42%, rgba(227, 210, 195, 0.62) 100%),
+      linear-gradient(180deg, #f6efe8 0%, #f1e6dd 100%);
+    color: var(--ink-neutral);
+    font-family: "Inter", sans-serif;
+  }
+
+  .font-body {
+    font-family: "Inter", sans-serif;
+  }
+
+  .font-display {
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+  }
+}
